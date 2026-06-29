@@ -1,8 +1,0 @@
-INFO:     127.0.0.1:51546 - "GET /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51546 - "GET /openapi.json HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56521 - "POST /auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57421 - "POST /interview/start HTTP/1.1" 500 Internal Server Error
-INFO:     127.0.0.1:63332 - "GET /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63332 - "GET /openapi.json HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56285 - "POST /auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61930 - "POST /interview/start HTTP/1.1" 200 OK
