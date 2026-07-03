@@ -188,19 +188,27 @@ export default function Home() {
                 </a>
               </div>
 
-              <div className="mt-6 flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {["#C8FF00", "#C8FF00", "#C8FF00"].map((c, i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full opacity-80 border-2 border-primary"
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
+              <div className="mt-6 flex items-center">
+                <div className="flex -space-x-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
+                    alt="Student 1"
+                    className="w-9 h-9 rounded-full object-cover border-2 border-[#0D1F0D]"
+                  />
+                  <img
+                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face"
+                    alt="Student 2"
+                    className="w-9 h-9 rounded-full object-cover border-2 border-[#0D1F0D]"
+                  />
+                  <img
+                    src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop&crop=face"
+                    alt="Student 3"
+                    className="w-9 h-9 rounded-full object-cover border-2 border-[#0D1F0D]"
+                  />
                 </div>
-                <span className="text-white/50 text-sm">
+                <p className="ml-3 text-sm text-white/70">
                   Built for CSE students • 100% Free
-                </span>
+                </p>
               </div>
             </div>
 

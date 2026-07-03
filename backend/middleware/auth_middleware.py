@@ -14,7 +14,6 @@ async def get_current_user(
 ) -> UserProfile:
     if not credentials:
         raise AuthException("Token missing", 401)
-
     token = credentials.credentials
 
     try:
