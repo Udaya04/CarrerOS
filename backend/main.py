@@ -7,11 +7,13 @@ from backend.services.resume_service import ResumeException
 from backend.services.quiz_service import QuizException
 from backend.services.interview_service import InterviewException
 from backend.services.jobs_service import JobException
+from backend.services.roadmap_service import RoadmapException
 from backend.routers.auth import router as auth_router
 from backend.routers.resume import router as resume_router
 from backend.routers.quiz import router as quiz_router
 from backend.routers.interview import router as interview_router
 from backend.routers.jobs import router as jobs_router
+from backend.routers.roadmap import router as roadmap_router
 
 app = FastAPI(title="AI Career Platform API")
 
@@ -22,6 +24,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -83,6 +87,17 @@ async def job_exception_handler(request: Request, exc: JobException):
         }
     )
 
+@app.exception_handler(RoadmapException)
+async def roadmap_exception_handler(request: Request, exc: RoadmapException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": True,
+            "message": exc.message,
+            "status": exc.status_code
+        }
+    )
+
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
@@ -117,6 +132,7 @@ app.include_router(resume_router)
 app.include_router(quiz_router)
 app.include_router(interview_router)
 app.include_router(jobs_router)
+app.include_router(roadmap_router)
 
 @app.get("/")
 async def root():
