@@ -58,12 +58,12 @@ export function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        <div className="flex items-center gap-2 px-5 pt-5 pb-6">
+        <Link href="/" className="flex items-center gap-2 px-5 pt-5 pb-6">
           <GraduationCap className="w-6 h-6 text-[#C8FF00]" />
           <span className="text-white font-bold text-lg">CareerOS</span>
-        </div>
+        </Link>
 
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className="flex-1 space-y-1 px-3 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive =

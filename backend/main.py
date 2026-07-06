@@ -8,12 +8,34 @@ from backend.services.quiz_service import QuizException
 from backend.services.interview_service import InterviewException
 from backend.services.jobs_service import JobException
 from backend.services.roadmap_service import RoadmapException
+from backend.services.blog_service import BlogException
 from backend.routers.auth import router as auth_router
 from backend.routers.resume import router as resume_router
 from backend.routers.quiz import router as quiz_router
 from backend.routers.interview import router as interview_router
 from backend.routers.jobs import router as jobs_router
 from backend.routers.roadmap import router as roadmap_router
+from backend.routers.blog import router as blog_router
+
+def sanitize_message(msg: str) -> str:
+    raw_patterns = [
+        "duplicate key value violates unique constraint",
+        "violates unique constraint",
+        "violates foreign key constraint",
+        "could not connect to server",
+        "connection refused",
+        "connection timed out",
+        "SSL error",
+        "permission denied for",
+        "syntax error at or near",
+        "invalid input syntax",
+        "null value in column",
+    ]
+    msg_lower = msg.lower()
+    for pattern in raw_patterns:
+        if pattern.lower() in msg_lower:
+            return "Something went wrong. Please try again."
+    return msg
 
 app = FastAPI(title="AI Career Platform API")
 
@@ -38,7 +60,7 @@ async def auth_exception_handler(request: Request, exc: AuthException):
         status_code=exc.status_code,
         content={
             "error": True,
-            "message": exc.message,
+            "message": sanitize_message(exc.message),
             "status": exc.status_code
         }
     )
@@ -49,7 +71,7 @@ async def resume_exception_handler(request: Request, exc: ResumeException):
         status_code=exc.status_code,
         content={
             "error": True,
-            "message": exc.message,
+            "message": sanitize_message(exc.message),
             "status": exc.status_code
         }
     )
@@ -60,7 +82,7 @@ async def quiz_exception_handler(request: Request, exc: QuizException):
         status_code=exc.status_code,
         content={
             "error": True,
-            "message": exc.message,
+            "message": sanitize_message(exc.message),
             "status": exc.status_code
         }
     )
@@ -71,7 +93,7 @@ async def interview_exception_handler(request: Request, exc: InterviewException)
         status_code=exc.status_code,
         content={
             "error": True,
-            "message": exc.message,
+            "message": sanitize_message(exc.message),
             "status": exc.status_code
         }
     )
@@ -82,7 +104,18 @@ async def job_exception_handler(request: Request, exc: JobException):
         status_code=exc.status_code,
         content={
             "error": True,
-            "message": exc.message,
+            "message": sanitize_message(exc.message),
+            "status": exc.status_code
+        }
+    )
+
+@app.exception_handler(BlogException)
+async def blog_exception_handler(request: Request, exc: BlogException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": True,
+            "message": sanitize_message(exc.message),
             "status": exc.status_code
         }
     )
@@ -93,7 +126,7 @@ async def roadmap_exception_handler(request: Request, exc: RoadmapException):
         status_code=exc.status_code,
         content={
             "error": True,
-            "message": exc.message,
+            "message": sanitize_message(exc.message),
             "status": exc.status_code
         }
     )
@@ -133,6 +166,7 @@ app.include_router(quiz_router)
 app.include_router(interview_router)
 app.include_router(jobs_router)
 app.include_router(roadmap_router)
+app.include_router(blog_router)
 
 @app.get("/")
 async def root():

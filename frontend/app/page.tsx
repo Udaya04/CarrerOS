@@ -125,13 +125,13 @@ export default function Home() {
                 <span className="text-white font-bold text-xl">CareerOS</span>
             </div>
             <div className="hidden md:flex items-center gap-8">
-              <a href="#" className="text-white/70 hover:text-white text-sm transition">
+              <a href="#journey" className="text-white/70 hover:text-white text-sm transition">
                 Features
               </a>
-              <a href="#" className="text-white/70 hover:text-white text-sm transition">
+              <a href="#journey" className="text-white/70 hover:text-white text-sm transition">
                 How It Works
               </a>
-              <a href="#" className="text-white/70 hover:text-white text-sm transition">
+              <a href="#blog" className="text-white/70 hover:text-white text-sm transition">
                 Blog
               </a>
             </div>
@@ -679,7 +679,7 @@ export default function Home() {
       </section>
 
       {/* SECTION 8 — BLOG PREVIEW */}
-      <section className="py-24 bg-white">
+      <section id="blog" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <span className="text-accent text-xs font-bold uppercase tracking-widest">

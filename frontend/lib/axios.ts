@@ -18,9 +18,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      window.location.href = "/auth/login"
+      const url = error.config?.url || ""
+      if (!url.includes("/auth/login")) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        window.location.href = "/auth/login"
+      }
     }
     return Promise.reject(error)
   }

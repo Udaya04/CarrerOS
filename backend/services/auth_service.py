@@ -101,8 +101,12 @@ class AuthService:
             
         except Exception as e:
             err_msg = str(e)
-            if "User already registered" in err_msg or "already exists" in err_msg:
-                raise AuthException("Email already exists", 400)
+            err_code = getattr(e, 'code', None)
+            if ("User already registered" in err_msg or
+                "already exists" in err_msg or
+                "duplicate key" in err_msg or
+                err_code == "23505"):
+                raise AuthException("An account with this email already exists", 400)
             raise AuthException(err_msg, 400)
 
     def login(self, data: UserLoginRequest) -> dict:
@@ -124,17 +128,23 @@ class AuthService:
             
             # If auth user exists but profile row does not, create it automatically on login
             if not db_response.data:
-                metadata = auth_response.user.user_metadata or {}
-                profile_data = {
-                    "id": user_id,
-                    "email": auth_response.user.email,
-                    "full_name": metadata.get("full_name") or auth_response.user.email.split("@")[0],
-                    "college": metadata.get("college"),
-                    "target_role": metadata.get("target_role"),
-                }
-                db_response = self.db_supabase.table("users").insert(profile_data).execute()
-                if not db_response.data:
-                    raise AuthException("User profile not found in database, and auto-creation failed.", 404)
+                email = auth_response.user.email
+                existing = self.db_supabase.table("users").select("*").eq("email", email).execute()
+                if existing.data:
+                    self.db_supabase.table("users").update({"id": user_id}).eq("email", email).execute()
+                    db_response = self.db_supabase.table("users").select("*").eq("id", user_id).execute()
+                else:
+                    metadata = auth_response.user.user_metadata or {}
+                    profile_data = {
+                        "id": user_id,
+                        "email": email,
+                        "full_name": metadata.get("full_name") or email.split("@")[0],
+                        "college": metadata.get("college"),
+                        "target_role": metadata.get("target_role"),
+                    }
+                    db_response = self.db_supabase.table("users").insert(profile_data).execute()
+                    if not db_response.data:
+                        raise AuthException("User profile not found in database, and auto-creation failed.", 404)
                 
             user_profile = db_response.data[0]
             if not isinstance(user_profile, dict):
@@ -147,8 +157,11 @@ class AuthService:
             
         except Exception as e:
             err_msg = str(e)
+            err_code = getattr(e, 'code', None)
             if "Invalid login credentials" in err_msg or "invalid_credentials" in err_msg:
                 raise AuthException("Invalid credentials", 401)
+            if "duplicate key" in err_msg or err_code == "23505":
+                raise AuthException("An account with this email already exists", 400)
             raise AuthException(err_msg, 401)
 
     def get_profile_by_id(self, user_id: str) -> UserProfile:
