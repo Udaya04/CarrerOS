@@ -6,7 +6,6 @@ Career, learning, and internship platform for students and job seekers.
 
 ![CareerOS Demo](link-to-demo-gif.gif)
 
-[![Build](https://img.shields.io/github/actions/workflow/status/YOUR_ORG/careeros/ci.yml?style=flat-square)](https://github.com/YOUR_ORG/careeros/actions)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-000000?style=flat-square&logo=next.js)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase)](https://supabase.com)
@@ -18,7 +17,7 @@ Career, learning, and internship platform for students and job seekers.
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_ORG/careeros.git && cd careeros
+git clone https://github.com/Udaya04/CarrerOS.git && cd CarrerOS
 
 # 2. Install dependencies
 npm install --prefix frontend
@@ -38,6 +37,7 @@ Copy `.env.example` to `.env` in `backend/` and `frontend/`, then add your Supab
 - **📝 Interactive Quiz LMS** — Take timed quizzes across DSA, CS fundamentals, aptitude, and verbal topics. Each quiz has a configurable question count and time limit. Get scored instantly with a breakdown of correct vs incorrect answers and explanations for every question you missed. Questions live in a structured pool so adding new topics is a data operation, not a code change.
 - **🤖 AI Mock Interview** — Practice interviews powered by Nemotron (served through Groq). The AI asks questions, listens to your spoken response via browser audio, transcribes it, and scores each answer on relevance, completeness, and timing. You get per-question feedback and an overall readiness score at the end. No scheduled slots, no interviewer needed.
 - **🧭 AI Roadmap Generator** — Type in any topic (DSA, Python, System Design, React, etc.) and get a structured learning roadmap with categories, topics, durations, and learning resources. Uses Groq (`llama-3.3-70b-versatile`) to generate descriptions and resources within hardcoded category templates for 11 known topics (DSA, Python, System Design, JavaScript, React, ML, OS, DBMS, CN, Java, Kotlin). Unknown topics fall back to AI-generated categories. Roadmaps are saved to Supabase and viewable in a card-based horizontal layout with expandable categories and inline topic detail panels.
+- **📝 Community Blog** — Read and share interview experiences, career tips, and market insights with peers. Full markdown editor with live preview, cover images, tags, and a like/comment system. Every user can write their own posts, edit them, and delete their own comments. Blog posts render markdown content with `react-markdown` and support cover images from any URL.
 - **🔐 Auth & Profiles** — Email-based authentication through Supabase with JWT session handling. After signup, create a profile with your name, college, branch, graduation year, and a skills list. The JWT is auto-attached to every API request by an axios interceptor — no manual token management on the frontend.
 
 ## 🏗️ Architecture
@@ -59,7 +59,7 @@ graph LR
 
 The Next.js client talks to the FastAPI backend over plain HTTP (local dev). Every request automatically carries a Supabase JWT in the `Authorization` header — the axios interceptor reads the token from `localStorage` and attaches it, so individual API calls never worry about auth state.
 
-The backend routes dispatch to six service modules:
+The backend routes dispatch to seven service modules:
 
 - **Auth** — signup, login, session refresh, and profile CRUD against Supabase Auth + the `profiles` table.
 - **Resume ATS** — accepts a PDF, extracts text with PyMuPDF, then uses a prompt chain (OpenAI/Groq) to split the content into structured sections and compute an ATS score.
@@ -67,6 +67,7 @@ The backend routes dispatch to six service modules:
 - **AI Interview** — generates interview questions via Nemotron (Groq), captures browser audio on the frontend, sends it for transcription, and scores each response using a rubric prompt.
 - **Jobs Board** — proxies the JSearch API with a two-tier cache: `search_cache` maps query hashes to job ID arrays, `jobs_cache` stores deduplicated job records. Cache TTL is 24 hours. Supports save/unsave and apply tracking in dedicated Supabase tables.
 - **Roadmap Generator** — accepts a topic and optional target role, dispatches to Groq to generate learning content within locked category templates, validates and retries on failure, and persists the result to the `roadmaps` Supabase table.
+- **Community Blog** — full CRUD for blog posts with markdown content, cover images, tags, and publish status. Supports likes (toggle) and threaded comments. Any authenticated user can create posts; only the author can edit or delete their own posts. Comments are owned by the comment author.
 
 Nemotron (accessed through the Groq API) handles interview dialogue generation and response scoring. The JSearch API (OpenWebNinja) supplies live job listings. Both are configured via `.env` — no hardcoded keys.
 
