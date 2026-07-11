@@ -134,15 +134,7 @@ class AuthService:
                     self.db_supabase.table("users").update({"id": user_id}).eq("email", email).execute()
                     db_response = self.db_supabase.table("users").select("*").eq("id", user_id).execute()
                 else:
-                    metadata = auth_response.user.user_metadata or {}
-                    profile_data = {
-                        "id": user_id,
-                        "email": email,
-                        "full_name": metadata.get("full_name") or email.split("@")[0],
-                        "college": metadata.get("college"),
-                        "target_role": metadata.get("target_role"),
-                    }
-                    db_response = self.db_supabase.table("users").insert(profile_data).execute()
+                    db_response = self._create_user_profile(auth_response, email, user_id)
                     if not db_response.data:
                         raise AuthException("User profile not found in database, and auto-creation failed.", 404)
                 
@@ -164,6 +156,17 @@ class AuthService:
                 raise AuthException("An account with this email already exists", 400)
             raise AuthException(err_msg, 401)
 
+    def _create_user_profile(self, auth_response, email: str, user_id: str):
+        metadata = auth_response.user.user_metadata or {}
+        profile_data = {
+            "id": user_id,
+            "email": email,
+            "full_name": metadata.get("full_name") or email.split("@")[0],
+            "college": metadata.get("college"),
+            "target_role": metadata.get("target_role"),
+        }
+        return self.db_supabase.table("users").insert(profile_data).execute()
+
     def get_profile_by_id(self, user_id: str) -> UserProfile:
         try:
             db_response = self.db_supabase.table("users").select("*").eq("id", user_id).execute()
@@ -173,6 +176,25 @@ class AuthService:
             if not isinstance(user_profile, dict):
                 raise AuthException("Invalid user profile format from database.", 500)
             return UserProfile(**user_profile)
+        except Exception as e:
+            if isinstance(e, AuthException):
+                raise e
+            raise AuthException(str(e), 400)
+
+    def update_profile(self, user_id: str, data: dict) -> UserProfile:
+        try:
+            filtered = {k: v for k, v in data.items() if v is not None}
+            if not filtered:
+                raise AuthException("No valid fields to update", 400)
+            db_response = (
+                self.db_supabase.table("users")
+                .update(filtered)
+                .eq("id", user_id)
+                .execute()
+            )
+            if not db_response.data:
+                raise AuthException("Failed to update profile", 500)
+            return UserProfile(**db_response.data[0])
         except Exception as e:
             if isinstance(e, AuthException):
                 raise e

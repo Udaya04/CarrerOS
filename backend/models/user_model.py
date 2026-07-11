@@ -27,6 +27,12 @@ class UserProfile(BaseModel):
     class Config:
         from_attributes = True
 
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    college: Optional[str] = None
+    target_role: Optional[str] = None
+    avatar_url: Optional[str] = None
+
 class AuthResponse(BaseModel):
     token: str
     user: UserProfile

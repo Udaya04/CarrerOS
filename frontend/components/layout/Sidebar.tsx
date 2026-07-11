@@ -12,6 +12,7 @@ import {
   Briefcase,
   Map,
   PenLine,
+  User,
   LogOut,
   Menu,
   X,
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/dashboard/jobs", label: "Job Board", icon: Briefcase },
   { href: "/dashboard/roadmap", label: "Roadmap", icon: Map },
   { href: "/dashboard/blog", label: "Blog", icon: PenLine },
+  { href: "/dashboard/profile", label: "Profile", icon: User },
 ]
 
 export function Sidebar() {

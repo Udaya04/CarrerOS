@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { Bell, User, Settings, LogOut, ChevronDown } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/authStore"
 
 const pageTitles: Record<string, string> = {
@@ -13,10 +14,12 @@ const pageTitles: Record<string, string> = {
   "/dashboard/jobs": "Job Board",
   "/dashboard/roadmap": "Roadmap",
   "/dashboard/blog": "Blog",
+  "/dashboard/profile": "Profile",
 }
 
 export function Topbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, logout } = useAuthStore()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -68,7 +71,10 @@ export function Topbar() {
                 </p>
                 <p className="text-xs text-[#6B7280] truncate">{user?.email}</p>
               </div>
-              <button className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#4B5563] hover:bg-[#F3F4F6] w-full transition-colors">
+              <button
+                onClick={() => { router.push("/dashboard/profile"); setDropdownOpen(false) }}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#4B5563] hover:bg-[#F3F4F6] w-full transition-colors"
+              >
                 <User className="w-4 h-4" />
                 Profile
               </button>

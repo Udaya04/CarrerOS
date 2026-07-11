@@ -35,7 +35,21 @@ export async function login(email: string, password: string): Promise<AuthRespon
   return res.data
 }
 
+export interface UpdateProfileData {
+  full_name?: string
+  college?: string
+  target_role?: string
+  avatar_url?: string
+}
+
 export async function getCurrentUser(): Promise<UserProfile> {
   const res = await api.get<UserProfile>("/auth/me")
+  return res.data
+}
+
+export async function updateProfile(
+  data: UpdateProfileData
+): Promise<UserProfile> {
+  const res = await api.patch<UserProfile>("/auth/profile", data)
   return res.data
 }

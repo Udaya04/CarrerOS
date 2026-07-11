@@ -34,7 +34,7 @@ async def upload_resume(
 
     score_result = resume_service.score_with_groq(extracted_text, target_role)
 
-    file_path = resume_service.upload_to_storage(current_user.id, file_bytes)
+    file_path = resume_service.upload_to_storage(current_user.id, file_bytes, file.filename)
 
     saved = resume_service.save_analysis(
         user_id=current_user.id,

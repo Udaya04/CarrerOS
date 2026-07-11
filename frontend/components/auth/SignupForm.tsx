@@ -1,12 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
-import { Loader2 } from "lucide-react"
+import { Loader2, CheckCircle } from "lucide-react"
 import { signUp } from "@/lib/auth"
-import { useAuthStore } from "@/store/authStore"
 
 const targetRoles = [
   "SDE Intern",
@@ -26,26 +25,66 @@ interface SignupFormData {
 
 export function SignupForm() {
   const router = useRouter()
-  const { setUser } = useAuthStore()
   const [error, setError] = useState("")
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [countdown, setCountdown] = useState(3)
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>()
 
+  useEffect(() => {
+    if (isSuccess) {
+      let count = 3
+      setCountdown(3)
+      const timer = setInterval(() => {
+        count--
+        setCountdown(count)
+        if (count === 0) {
+          clearInterval(timer)
+          router.push("/auth/login")
+        }
+      }, 1000)
+      return () => clearInterval(timer)
+    }
+  }, [isSuccess])
+
   const onSubmit = async (data: SignupFormData) => {
     setError("")
     try {
-      const res = await signUp(data)
-      setUser(res.user, res.token)
-      router.push("/dashboard")
+      await signUp(data)
+      setIsSuccess(true)
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message || "Signup failed. Please try again."
       setError(msg)
     }
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center mx-auto">
+          <CheckCircle className="w-8 h-8 text-[#0D1F0D]" />
+        </div>
+        <h3 className="text-xl font-bold text-[#0D1F0D] mt-4">
+          Account Created Successfully!
+        </h3>
+        <p className="text-[#6B7280] text-sm mt-2">
+          Welcome to CareerOS. Please login to start your journey.
+        </p>
+        <p className="text-[#9CA3AF] text-xs mt-4">
+          Redirecting to login in {countdown}s...
+        </p>
+        <Link href="/auth/login">
+          <button className="mt-6 bg-[#0D1F0D] text-white rounded-full px-8 py-3 font-bold w-full hover:bg-[#1A2B1A] transition">
+            Go to Login &rarr;
+          </button>
+        </Link>
+      </div>
+    )
   }
 
   return (

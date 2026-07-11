@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+import re
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from groq import Groq
@@ -15,6 +16,16 @@ else:
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
+
+def sanitize_filename(filename: str) -> str:
+    filename = os.path.basename(filename)
+    filename = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
+    if not filename.lower().endswith('.pdf'):
+        filename = filename + '.pdf'
+    if len(filename) > 100:
+        filename = filename[:96] + '.pdf'
+    return filename
 
 
 class ResumeException(Exception):
@@ -112,9 +123,10 @@ Return JSON in this exact structure:
                         500
                     )
 
-    def upload_to_storage(self, user_id: str, file_bytes: bytes) -> str:
+    def upload_to_storage(self, user_id: str, file_bytes: bytes, original_filename: str = "") -> str:
         try:
-            file_path = f"resumes/{user_id}/{uuid.uuid4()}.pdf"
+            safe_filename = sanitize_filename(original_filename) if original_filename else f"{uuid.uuid4()}.pdf"
+            file_path = f"resumes/{user_id}/{uuid.uuid4()}_{safe_filename}"
             self.supabase.storage.from_("resumes").upload(
                 file_path, 
                 file_bytes,

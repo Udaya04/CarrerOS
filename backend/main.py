@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from backend.services.auth_service import AuthException
 from backend.services.resume_service import ResumeException
 from backend.services.quiz_service import QuizException
@@ -37,7 +39,11 @@ def sanitize_message(msg: str) -> str:
             return "Something went wrong. Please try again."
     return msg
 
+from backend.routers.auth import limiter
+
 app = FastAPI(title="AI Career Platform API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 from fastapi.middleware.cors import CORSMiddleware
 

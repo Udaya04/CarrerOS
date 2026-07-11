@@ -112,7 +112,7 @@ export default function EditBlogPage() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Blog title..."
-          className="w-full text-xl font-bold border-0 border-b-2 border-[#E5E7EB] pb-3 bg-transparent focus:outline-none focus:border-[#0D1F0D] transition placeholder:text-[#9CA3AF]"
+          className="w-full text-2xl font-bold border-b-2 border-[#E5E7EB] py-3 outline-none bg-white text-[#0D1F0D] focus:border-[#0D1F0D]"
           required
         />
 
@@ -121,7 +121,7 @@ export default function EditBlogPage() {
           value={coverImage}
           onChange={(e) => setCoverImage(e.target.value)}
           placeholder="Cover image URL (optional)"
-          className="w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8FF00] focus:border-transparent"
+          className="w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm bg-white text-[#0D1F0D] focus:outline-none focus:ring-2 focus:ring-[#C8FF00] focus:border-transparent"
         />
 
         <div>
@@ -144,7 +144,7 @@ export default function EditBlogPage() {
             onChange={(e) => setTagsInput(e.target.value)}
             onKeyDown={handleAddTag}
             placeholder="Type a tag and press Enter..."
-            className="w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8FF00] focus:border-transparent"
+            className="w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm bg-white text-[#0D1F0D] focus:outline-none focus:ring-2 focus:ring-[#C8FF00] focus:border-transparent"
           />
         </div>
 
@@ -169,7 +169,7 @@ export default function EditBlogPage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write your blog content in markdown..."
-              className="w-full min-h-96 border border-[#E5E7EB] rounded-xl p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8FF00] focus:border-transparent resize-y"
+              className="w-full min-h-96 border border-[#E5E7EB] rounded-xl p-4 text-sm font-mono bg-white text-[#0D1F0D] focus:outline-none focus:ring-2 focus:ring-[#C8FF00] focus:border-transparent resize-y"
               required
             />
           )}
