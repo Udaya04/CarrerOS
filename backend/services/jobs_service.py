@@ -87,6 +87,9 @@ class JobsService:
         if response.status_code != 200:
             raise JobException(f"JSearch API error: {response.status_code}", 502)
 
+        return self._map_jsearch_response(response)
+
+    def _map_jsearch_response(self, response: httpx.Response) -> list[dict]:
         raw = response.json()
         data = raw.get("data", {}).get("jobs", []) if isinstance(raw, dict) else []
         mapped = []

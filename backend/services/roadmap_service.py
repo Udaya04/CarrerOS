@@ -207,6 +207,51 @@ Return raw JSON only. No explanation. No markdown."""
             raise ValueError("No JSON found")
         return json.loads(raw[start:end])
 
+    def _generate_categories_content(
+            self,
+            prompt: str,
+            categories: list[str],
+            topic: str
+    ) -> list[RoadmapCategory]:
+        completion = self.groq.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"You are a {topic} expert. Return raw JSON only."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=4000,
+        )
+        raw = completion.choices[0].message.content
+        result = self._parse_json(raw)
+
+        raw_cats = result.get("categories", [])
+        parsed_categories = []
+
+        for i, cat in enumerate(raw_cats):
+            topics = []
+            for t in cat.get("topics", []):
+                topics.append(RoadmapTopic(
+                    title=t.get("title", ""),
+                    description=t.get("description", ""),
+                    duration=t.get("duration", ""),
+                    resources=t.get("resources", [])
+                ))
+            correct_title = (categories[i]
+                             if i < len(categories)
+                             else cat.get("title", ""))
+            parsed_categories.append(RoadmapCategory(
+                title=correct_title,
+                description=cat.get("description", ""),
+                duration=cat.get("duration", ""),
+                topics=topics
+            ))
+
+        return parsed_categories
+
     def generate_roadmap(
             self,
             user_id: str,
@@ -239,47 +284,11 @@ Return JSON only: {{"categories": ["Cat1", "Cat2", "Cat3"]}}"""
         # Build content prompt with locked categories
         prompt = self._build_prompt(topic, categories, target_role)
 
-        # Call Groq for content
+        # Call Groq for content (with retries)
         for attempt in range(3):
             try:
-                completion = self.groq.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": f"You are a {topic} expert. Return raw JSON only."
-                        },
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.3,
-                    max_tokens=4000,
-                )
-                raw = completion.choices[0].message.content
-                result = self._parse_json(raw)
-
-                # Parse categories
-                raw_cats = result.get("categories", [])
-                parsed_categories = []
-
-                for i, cat in enumerate(raw_cats):
-                    topics = []
-                    for t in cat.get("topics", []):
-                        topics.append(RoadmapTopic(
-                            title=t.get("title", ""),
-                            description=t.get("description", ""),
-                            duration=t.get("duration", ""),
-                            resources=t.get("resources", [])
-                        ))
-                    # Force correct title from our list
-                    correct_title = (categories[i]
-                                     if i < len(categories)
-                                     else cat.get("title", ""))
-                    parsed_categories.append(RoadmapCategory(
-                        title=correct_title,
-                        description=cat.get("description", ""),
-                        duration=cat.get("duration", ""),
-                        topics=topics
-                    ))
+                parsed_categories = self._generate_categories_content(
+                    prompt, categories, topic)
 
                 if not parsed_categories:
                     raise ValueError("No categories generated")
