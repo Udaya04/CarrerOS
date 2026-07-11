@@ -714,9 +714,6 @@ export default function Home() {
               <h3 className="text-[#0D1F0D] font-bold mt-4 leading-snug">
                 How I Improved My ATS Score From 45 to 89 in 2 Weeks
               </h3>
-              <p className="text-[#6B7280] text-sm mt-2">
-                June 29, 2026 • 6 min read
-              </p>
             </div>
 
             {/* Card 2 — Featured */}
@@ -729,9 +726,6 @@ export default function Home() {
               <h3 className="text-[#0D1F0D] font-bold mt-4 leading-snug">
                 Complete Guide to CS Interview Preparation for 2026
               </h3>
-              <p className="text-[#6B7280] text-sm mt-2">
-                June 28, 2026 • 8 min read
-              </p>
             </div>
 
             {/* Card 3 */}
@@ -744,9 +738,6 @@ export default function Home() {
               <h3 className="text-[#0D1F0D] font-bold mt-4 leading-snug">
                 Top 10 Resume Mistakes CSE Students Make
               </h3>
-              <p className="text-[#6B7280] text-sm mt-2">
-                June 27, 2026 • 5 min read
-              </p>
             </div>
           </div>
         </div>
