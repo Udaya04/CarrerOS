@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import {
-  Loader2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -16,17 +15,23 @@ import {
   Database,
   Network,
   Box,
+  Bookmark,
+  GraduationCap,
 } from "lucide-react"
 import {
   generateQuiz,
   submitQuiz,
   listAttempts,
   getAttempt,
+  addBookmark,
+  removeBookmark,
+  listBookmarks,
 } from "@/lib/quiz"
 import type {
   QuestionResponse,
   QuizResultResponse,
   AttemptSummary,
+  BookmarkResponse,
 } from "@/lib/quiz"
 import {
   CircularProgress,
@@ -55,7 +60,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function QuizPage() {
-  const [activeTab, setActiveTab] = useState<"new" | "history">("new")
+  const [activeTab, setActiveTab] = useState<"new" | "history" | "bookmarks">("new")
   const [error, setError] = useState<string | null>(null)
 
   // Setup state
@@ -80,6 +85,12 @@ export default function QuizPage() {
 
   // History state
   const [history, setHistory] = useState<AttemptSummary[]>([])
+
+  // Bookmarks state
+  const [bookmarks, setBookmarks] = useState<Set<number>>(new Set())
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false)
+  const [bookmarkList, setBookmarkList] = useState<BookmarkResponse[]>([])
+  const [loadingBookmarkList, setLoadingBookmarkList] = useState(false)
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const hasAutoSubmitted = useRef(false)
@@ -107,7 +118,15 @@ export default function QuizPage() {
       setAnswers(new Array(res.questions.length).fill(-1))
       setCurrentIndex(0)
       setQuizState("quiz")
+      setBookmarks(new Set())
       hasAutoSubmitted.current = false
+      setLoadingBookmarks(true)
+      listBookmarks().then(all => {
+        const ids = new Set(
+          all.filter(b => b.attempt_id === res.attempt_id).map(b => b.question_index)
+        )
+        setBookmarks(ids)
+      }).catch(() => {}).finally(() => setLoadingBookmarks(false))
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string }, status?: number } })?.response?.data?.message
@@ -115,6 +134,22 @@ export default function QuizPage() {
       setError(msg)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const toggleBookmark = async (index: number) => {
+    if (!attemptId) return
+    try {
+      if (bookmarks.has(index)) {
+        await removeBookmark(attemptId, index)
+        setBookmarks(prev => { const n = new Set(prev); n.delete(index); return n; })
+      } else {
+        const note = window.prompt("Add a note for this bookmark (optional):")
+        await addBookmark({ attempt_id: attemptId, question_index: index, note: note || undefined })
+        setBookmarks(prev => new Set(prev).add(index))
+      }
+    } catch {
+      setError("Failed to update bookmark")
     }
   }
 
@@ -202,6 +237,14 @@ export default function QuizPage() {
       const data = await getAttempt(id)
       setHistoryResult(data)
       setActiveTab("new")
+      setBookmarks(new Set())
+      setLoadingBookmarks(true)
+      listBookmarks().then(all => {
+        const ids = new Set(
+          all.filter(b => b.attempt_id === id).map(b => b.question_index)
+        )
+        setBookmarks(ids)
+      }).catch(() => {}).finally(() => setLoadingBookmarks(false))
     } catch {
       setError("Failed to load attempt")
     }
@@ -215,6 +258,7 @@ export default function QuizPage() {
     setResult(null)
     setHistoryResult(null)
     setCurrentIndex(0)
+    setBookmarks(new Set())
     setError(null)
     if (timerRef.current) clearInterval(timerRef.current)
   }
@@ -232,6 +276,16 @@ export default function QuizPage() {
       return () => window.removeEventListener("beforeunload", handler)
     }
   }, [quizState])
+
+  useEffect(() => {
+    if (activeTab === "bookmarks") {
+      setLoadingBookmarkList(true)
+      listBookmarks()
+        .then(setBookmarkList)
+        .catch(() => {})
+        .finally(() => setLoadingBookmarkList(false))
+    }
+  }, [activeTab])
 
   const displayResult = result || historyResult
 
@@ -260,6 +314,16 @@ export default function QuizPage() {
             }`}
           >
             History
+          </button>
+          <button
+            onClick={() => setActiveTab("bookmarks")}
+            className={`text-sm font-bold pb-2 border-b-2 transition-colors ${
+              activeTab === "bookmarks"
+                ? "text-[#0D1F0D] border-[#0D1F0D]"
+                : "text-[#9CA3AF] border-transparent"
+            }`}
+          >
+            Bookmarks
           </button>
         </div>
 
@@ -305,6 +369,41 @@ export default function QuizPage() {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : activeTab === "bookmarks" ? (
+          // ── BOOKMARKS ──
+          <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+            <h3 className="font-bold text-[#0D1F0D] mb-4">Bookmarked Questions</h3>
+            {loadingBookmarkList ? (
+              <div className="flex items-center justify-center py-8 animate-logo-pulse">
+                <GraduationCap className="w-8 h-8 text-[#C8FF00]" />
+                <span className="ml-2 font-bold text-[#0D1F0D]">CareerOS</span>
+              </div>
+            ) : bookmarkList.length === 0 ? (
+              <p className="text-sm text-[#9CA3AF] text-center py-8">
+                No bookmarked questions yet. Bookmark questions during a quiz to review them later.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {bookmarkList.map((bm) => (
+                  <div key={bm.id} className="flex flex-col gap-1 py-3 px-4 rounded-lg hover:bg-[#F9FAFB] transition-colors border border-transparent hover:border-[#E5E7EB]">
+                    <div className="flex items-start gap-2">
+                      <Bookmark className="w-3.5 h-3.5 text-yellow-500 fill-current flex-shrink-0 mt-0.5" />
+                      <span className="text-sm font-medium text-[#0D1F0D]">{bm.question_text}</span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-5">
+                      <span className="inline-block bg-[#0D1F0D]/10 text-[#0D1F0D] rounded-full text-xs px-2 py-0.5">
+                        {bm.topic}
+                      </span>
+                      <span className="text-xs text-[#6B7280] capitalize">{bm.difficulty}</span>
+                      {bm.note && (
+                        <span className="text-xs text-[#9CA3AF] italic">Note: {bm.note}</span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -419,10 +518,11 @@ export default function QuizPage() {
                   className="w-full bg-[#0D1F0D] text-white rounded-full py-3 font-bold hover:bg-[#1A2B1A] transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {generating ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Generating your quiz...
-                    </>
+                    <div className="flex items-center gap-3 animate-logo-pulse">
+                      <GraduationCap className="w-6 h-6 text-[#C8FF00]" />
+                      <span className="font-bold">CareerOS</span>
+                      <span className="text-sm font-medium opacity-70">Generating your quiz...</span>
+                    </div>
                   ) : (
                     "Start Quiz →"
                   )}
@@ -480,9 +580,23 @@ export default function QuizPage() {
 
         {/* Question Card */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 lg:p-8">
-          <span className="inline-block bg-[#0D1F0D]/10 text-[#0D1F0D] rounded-full text-xs px-3 py-1 mb-4">
-            {question.topic}
-          </span>
+          <div className="flex items-center justify-between mb-4">
+            <span className="inline-block bg-[#0D1F0D]/10 text-[#0D1F0D] rounded-full text-xs px-3 py-1">
+              {question.topic}
+            </span>
+            <button
+              onClick={() => toggleBookmark(currentIndex)}
+              disabled={loadingBookmarks}
+              className={`p-1.5 rounded-lg transition-colors ${
+                bookmarks.has(currentIndex)
+                  ? "text-yellow-500 hover:text-yellow-600"
+                  : "text-[#9CA3AF] hover:text-[#4B5563]"
+              }`}
+              title={bookmarks.has(currentIndex) ? "Remove bookmark" : "Bookmark this question"}
+            >
+              <Bookmark className={`w-5 h-5 ${bookmarks.has(currentIndex) ? "fill-current" : ""}`} />
+            </button>
+          </div>
           <h2 className="text-lg font-semibold text-[#0D1F0D] leading-relaxed">
             {question.question}
           </h2>
@@ -556,10 +670,11 @@ export default function QuizPage() {
               className="bg-[#0D1F0D] text-white rounded-full px-6 py-2 text-sm font-bold hover:bg-[#1A2B1A] transition flex items-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Submitting...
-                </>
+                <div className="flex items-center gap-2 animate-logo-pulse">
+                  <GraduationCap className="w-4 h-4 text-[#C8FF00]" />
+                  <span className="font-bold text-sm">CareerOS</span>
+                  <span className="text-xs opacity-70">Submitting...</span>
+                </div>
               ) : (
                 "Submit Quiz"
               )}
@@ -824,6 +939,9 @@ export default function QuizPage() {
               <span className="text-sm font-bold text-[#6B7280]">
                 Q{idx + 1}
               </span>
+              {bookmarks.has(idx) && (
+                <Bookmark className="w-3.5 h-3.5 text-yellow-500 fill-current" />
+              )}
               <span className="inline-block bg-[#0D1F0D]/10 text-[#0D1F0D] rounded-full text-xs px-2 py-0.5">
                 {q.topic}
               </span>

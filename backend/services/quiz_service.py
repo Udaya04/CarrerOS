@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import random
+import hashlib
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
@@ -16,6 +17,8 @@ from backend.models.quiz_model import (
     QuestionResult,
     QuizResultResponse,
     AttemptSummary,
+    BookmarkAddRequest,
+    BookmarkResponse,
 )
 
 
@@ -67,6 +70,33 @@ class QuizService:
                 return value
         return value
 
+    def _get_question_hash(self, question: str) -> str:
+        """Generate a hash for a question to detect duplicates."""
+        normalized = " ".join(question.lower().split())
+        return hashlib.sha256(normalized.encode()).hexdigest()[:16]
+
+    def _get_previous_question_hashes(self, user_id: str, topic: str, limit: int = 50) -> set[str]:
+        """Fetch hashes of previously asked questions for a user/topic."""
+        try:
+            resp = (
+                self.supabase.table("attempts")
+                .select("questions")
+                .eq("user_id", user_id)
+                .contains("topics", [topic])
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            hashes = set()
+            for attempt in resp.data or []:
+                questions = self._parse_json_field(attempt.get("questions", []))
+                for q in questions:
+                    if q.get("topic") == topic:
+                        hashes.add(self._get_question_hash(q["question"]))
+            return hashes
+        except Exception:
+            return set()
+
     def generate_questions(self, user_id: str, topics: list[str], difficulty: str, total_questions: int) -> QuizGenerateResponse:
         try:
             last_resp = (
@@ -93,6 +123,15 @@ class QuizService:
         except Exception as e:
             raise QuizException(str(e), 400)
 
+        try:
+            self.supabase.table("attempts")\
+                .update({"status": "abandoned"})\
+                .eq("user_id", user_id)\
+                .eq("status", "pending")\
+                .execute()
+        except Exception:
+            pass
+
         base = total_questions // len(topics)
         remainder = total_questions % len(topics)
         counts = []
@@ -101,10 +140,12 @@ class QuizService:
 
         all_questions = []
         with ThreadPoolExecutor(max_workers=len(topics)) as executor:
-            future_map = {
-                executor.submit(self._generate_topic_questions, topic, difficulty, counts[i]): topic
-                for i, topic in enumerate(topics)
-            }
+            future_map = {}
+            for i, topic in enumerate(topics):
+                previous_hashes = self._get_previous_question_hashes(user_id, topic)
+                future_map[
+                    executor.submit(self._generate_topic_questions, topic, difficulty, counts[i], previous_hashes)
+                ] = topic
             for future in as_completed(future_map):
                 topic = future_map[future]
                 try:
@@ -158,12 +199,23 @@ class QuizService:
             questions=sanitized,
         )
 
-    def _generate_topic_questions(self, topic: str, difficulty: str, count: int) -> list[dict]:
+    def _generate_topic_questions(self, topic: str, difficulty: str, count: int, previous_hashes: set[str] = None) -> list[dict]:
+        if previous_hashes is None:
+            previous_hashes = set()
+
         system_prompt = (
             "You are an expert computer science quiz generator. "
             "Generate multiple-choice questions in valid JSON only. "
             "No markdown, no code blocks, no explanation outside the JSON."
         )
+
+        exclude_note = ""
+        if previous_hashes:
+            exclude_note = (
+                f"\n\nIMPORTANT: Do NOT generate questions similar to these previously asked "
+                f"question hashes (first 16 chars of SHA256): {', '.join(sorted(previous_hashes))}. "
+                "Ensure new questions are distinct in wording and concept."
+            )
 
         user_prompt = f"""Generate {count} {difficulty} multiple-choice questions on the topic "{topic}".
 
@@ -183,7 +235,7 @@ Return valid JSON in this exact structure:
       "explanation": "string"
     }}
   ]
-}}"""
+}}{exclude_note}"""
 
         for attempt in range(2):
             try:
@@ -209,10 +261,26 @@ Return valid JSON in this exact structure:
                         raise ValueError("Each question must have exactly 4 options")
                     if not isinstance(q["correct_option"], int) or q["correct_option"] not in range(4):
                         raise ValueError("correct_option must be an integer 0-3")
+
+                # Filter out any duplicates the LLM might have generated
+                seen = set()
+                unique_questions = []
                 for q in questions:
+                    q_hash = self._get_question_hash(q["question"])
+                    if q_hash not in previous_hashes and q_hash not in seen:
+                        seen.add(q_hash)
+                        unique_questions.append(q)
+
+                if len(unique_questions) < count:
+                    # If we lost questions to deduplication, retry once
+                    if attempt == 0:
+                        continue
+                    raise ValueError(f"Generated {len(unique_questions)} unique questions, need {count}")
+
+                for q in unique_questions:
                     q["topic"] = topic
                     q["difficulty"] = difficulty
-                return questions
+                return unique_questions
             except (json.JSONDecodeError, ValueError, TypeError, KeyError):
                 if attempt == 1:
                     raise QuizException(
@@ -488,4 +556,98 @@ Return valid JSON in this exact structure:
             if isinstance(e, QuizException):
                 raise
             raise QuizException(str(e), 400)
+
+    def add_bookmark(self, user_id: str, attempt_id: str, question_index: int, note: str = None) -> dict:
+        try:
+            resp = self.supabase.table("attempts").select("questions, topics, difficulty").eq("id", attempt_id).execute()
+            if not resp.data:
+                raise QuizException("Attempt not found", 404)
+            attempt = resp.data[0]
+
+            questions = self._parse_json_field(attempt.get("questions", []))
+            if question_index < 0 or question_index >= len(questions):
+                raise QuizException("Invalid question index", 400)
+
+            q = questions[question_index]
+            payload = {
+                "attempt_id": attempt_id,
+                "question_index": question_index,
+                "note": note,
+                "question_text": q.get("question", ""),
+                "topic": q.get("topic", ""),
+                "difficulty": q.get("difficulty", ""),
+            }
+
+            upsert = (
+                self.supabase.table("question_bookmarks")
+                .upsert(
+                    {
+                        "user_id": user_id,
+                        "attempt_id": attempt_id,
+                        "question_index": question_index,
+                        "note": note,
+                    },
+                    on_conflict="user_id, attempt_id, question_index",
+                )
+                .execute()
+            )
+
+            if upsert.data:
+                payload["id"] = upsert.data[0]["id"]
+            return payload
+
+        except QuizException:
+            raise
+        except Exception as e:
+            raise QuizException(f"Failed to add bookmark: {str(e)}", 400)
+
+    def remove_bookmark(self, user_id: str, attempt_id: str, question_index: int) -> None:
+        try:
+            self.supabase.table("question_bookmarks")\
+                .delete()\
+                .eq("user_id", user_id)\
+                .eq("attempt_id", attempt_id)\
+                .eq("question_index", question_index)\
+                .execute()
+        except Exception as e:
+            raise QuizException(f"Failed to remove bookmark: {str(e)}", 400)
+
+    def get_user_bookmarks(self, user_id: str) -> list[dict]:
+        try:
+            resp = (
+                self.supabase.table("question_bookmarks")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            results = []
+            for row in resp.data or []:
+                bm = {
+                    "id": row["id"],
+                    "attempt_id": row["attempt_id"],
+                    "question_index": row["question_index"],
+                    "note": row.get("note"),
+                    "created_at": row.get("created_at"),
+                    "question_text": "",
+                    "topic": "",
+                    "difficulty": "",
+                }
+                try:
+                    att_resp = self.supabase.table("attempts").select("questions, topics, difficulty").eq("id", row["attempt_id"]).execute()
+                    if att_resp.data:
+                        att = att_resp.data[0]
+                        questions = self._parse_json_field(att.get("questions", []))
+                        idx = row["question_index"]
+                        if idx < len(questions):
+                            q = questions[idx]
+                            bm["question_text"] = q.get("question", "")
+                            bm["topic"] = q.get("topic", "")
+                            bm["difficulty"] = q.get("difficulty", "")
+                except Exception:
+                    pass
+                results.append(bm)
+            return results
+        except Exception as e:
+            raise QuizException(f"Failed to fetch bookmarks: {str(e)}", 400)
     

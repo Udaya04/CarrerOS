@@ -1,7 +1,14 @@
 from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from backend.models.user_model import UserSignUpRequest, UserLoginRequest, UserProfile, UserProfileUpdate, AuthResponse
+from backend.models.user_model import (
+    UserSignUpRequest,
+    UserLoginRequest,
+    UserProfile,
+    UserProfileUpdate,
+    ChangePasswordRequest,
+    AuthResponse,
+)
 from backend.services.auth_service import AuthService
 from backend.middleware.auth_middleware import get_current_user
 
@@ -32,3 +39,13 @@ async def update_profile(
 ):
     result = auth_service.update_profile(current_user.id, body.model_dump())
     return result
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user: UserProfile = Depends(get_current_user),
+):
+    auth_service.change_password(
+        current_user.id, current_user.email, body.current_password, body.new_password
+    )
+    return {"message": "Password changed successfully"}

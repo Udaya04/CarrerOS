@@ -96,7 +96,38 @@ export async function getAttempt(
   return res.data
 }
 
-export async function getStats(): Promise<QuizStatsResponse> {
-  const res = await api.get<QuizStatsResponse>("/quiz/stats")
+export interface BookmarkAddRequest {
+  attempt_id: string
+  question_index: number
+  note?: string
+}
+
+export interface BookmarkResponse {
+  id: string
+  attempt_id: string
+  question_index: number
+  note?: string
+  created_at?: string
+  question_text: string
+  topic: string
+  difficulty: string
+}
+
+export async function addBookmark(
+  data: BookmarkAddRequest
+): Promise<BookmarkResponse> {
+  const res = await api.post<BookmarkResponse>("/quiz/bookmarks", data)
+  return res.data
+}
+
+export async function removeBookmark(
+  attempt_id: string,
+  question_index: number
+): Promise<void> {
+  await api.delete(`/quiz/bookmarks/${attempt_id}/${question_index}`)
+}
+
+export async function listBookmarks(): Promise<BookmarkResponse[]> {
+  const res = await api.get<BookmarkResponse[]>("/quiz/bookmarks")
   return res.data
 }

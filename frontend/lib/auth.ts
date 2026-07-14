@@ -53,3 +53,13 @@ export async function updateProfile(
   const res = await api.patch<UserProfile>("/auth/profile", data)
   return res.data
 }
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  await api.post("/auth/change-password", {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}

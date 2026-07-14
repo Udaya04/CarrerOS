@@ -37,3 +37,12 @@ body {
   word-spacing: normal;
   line-height: 1.1;
 }
+
+@keyframes logo-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.97); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.animate-logo-pulse {
+  animation: logo-pulse 1.5s ease-in-out infinite;
+}

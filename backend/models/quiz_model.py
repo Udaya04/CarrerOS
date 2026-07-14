@@ -108,3 +108,23 @@ class AttemptSummary(BaseModel):
 
 class QuizStatsResponse(BaseModel):
     skill_scores: dict[str, int]
+
+
+class BookmarkAddRequest(BaseModel):
+    attempt_id: str
+    question_index: int
+    note: Optional[str] = None
+
+
+class BookmarkResponse(BaseModel):
+    id: str
+    attempt_id: str
+    question_index: int
+    note: Optional[str] = None
+    created_at: Optional[datetime] = None
+    question_text: str = ""
+    topic: str = ""
+    difficulty: str = ""
+
+    class Config:
+        from_attributes = True

@@ -33,6 +33,10 @@ class UserProfileUpdate(BaseModel):
     target_role: Optional[str] = None
     avatar_url: Optional[str] = None
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
+
 class AuthResponse(BaseModel):
     token: str
     user: UserProfile

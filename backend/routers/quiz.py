@@ -7,6 +7,8 @@ from backend.models.quiz_model import (
     QuizResultResponse,
     AttemptSummary,
     QuizStatsResponse,
+    BookmarkAddRequest,
+    BookmarkResponse,
 )
 from backend.services.quiz_service import QuizService
 from backend.middleware.auth_middleware import get_current_user
@@ -49,3 +51,26 @@ async def get_attempt(
 @router.get("/stats", response_model=QuizStatsResponse)
 async def get_stats(current_user: UserProfile = Depends(get_current_user)):
     return quiz_service.get_skill_stats(current_user.id)
+
+
+@router.post("/bookmarks", response_model=BookmarkResponse)
+async def add_bookmark(
+    body: BookmarkAddRequest,
+    current_user: UserProfile = Depends(get_current_user),
+):
+    return quiz_service.add_bookmark(current_user.id, body.attempt_id, body.question_index, body.note)
+
+
+@router.delete("/bookmarks/{attempt_id}/{question_index}")
+async def remove_bookmark(
+    attempt_id: str,
+    question_index: int,
+    current_user: UserProfile = Depends(get_current_user),
+):
+    quiz_service.remove_bookmark(current_user.id, attempt_id, question_index)
+    return {"ok": True}
+
+
+@router.get("/bookmarks", response_model=list[BookmarkResponse])
+async def list_bookmarks(current_user: UserProfile = Depends(get_current_user)):
+    return quiz_service.get_user_bookmarks(current_user.id)

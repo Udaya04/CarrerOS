@@ -15,6 +15,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/roadmap": "Roadmap",
   "/dashboard/blog": "Blog",
   "/dashboard/profile": "Profile",
+  "/dashboard/settings": "Settings",
 }
 
 export function Topbar() {
@@ -78,7 +79,10 @@ export function Topbar() {
                 <User className="w-4 h-4" />
                 Profile
               </button>
-              <button className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#4B5563] hover:bg-[#F3F4F6] w-full transition-colors">
+              <button
+                onClick={() => { router.push("/dashboard/settings"); setDropdownOpen(false) }}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#4B5563] hover:bg-[#F3F4F6] w-full transition-colors"
+              >
                 <Settings className="w-4 h-4" />
                 Settings
               </button>

@@ -181,6 +181,25 @@ class AuthService:
                 raise e
             raise AuthException(str(e), 400)
 
+    def change_password(self, user_id: str, email: str, current_password: str, new_password: str) -> None:
+        try:
+            auth_resp = self.auth_supabase.auth.sign_in_with_password({
+                "email": email,
+                "password": current_password,
+            })
+            if not auth_resp.user:
+                raise AuthException("Current password is incorrect", 400)
+            self.auth_supabase.auth.admin.update_user_by_id(
+                user_id, {"password": new_password}
+            )
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "invalid login credentials" in err_msg or "invalid_credentials" in err_msg:
+                raise AuthException("Current password is incorrect", 400)
+            if isinstance(e, AuthException):
+                raise e
+            raise AuthException(str(e), 400)
+
     def update_profile(self, user_id: str, data: dict) -> UserProfile:
         try:
             filtered = {k: v for k, v in data.items() if v is not None}
