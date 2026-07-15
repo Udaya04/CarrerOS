@@ -54,9 +54,9 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=(
-        os.environ.get("ALLOWED_ORIGINS", "").split(",")
-        if os.environ.get("ALLOWED_ORIGINS")
-        else [
+        [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+        + ([os.environ["FRONTEND_URL"]] if "FRONTEND_URL" in os.environ else [])
+        or [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:3001",
